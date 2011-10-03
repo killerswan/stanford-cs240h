@@ -6,7 +6,7 @@
 -- Maintainer  : Kevin Cantu <me@kevincantu.org>
 -- Stability   : experimental
 
-{-# LANGUAGE DoAndIfThenElse #-}
+{-# LANGUAGE DoAndIfThenElse #-}  -- also considering: OverloadedStrings
 
 module Main where
 
