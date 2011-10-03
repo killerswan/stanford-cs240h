@@ -1,0 +1,32 @@
+name:                cs240h-lab1
+version:             1.0
+synopsis:            Word frequency counting
+description:         
+    .
+    An implementation of Lab 1: http://www.scs.stanford.edu/11au-cs240h/labs/lab1.html
+    .
+category:            School
+stability:           experimental
+license:             BSD3
+license-file:        LICENSE
+author:              Kevin Cantu <me@kevincantu.org>
+maintainer:          Kevin Cantu <me@kevincantu.org>
+copyright:           (c) 2011 Kevin Cantu
+homepage:            https://github.com/killerswan/
+bug-reports:         https://github.com/killerswan/
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+   type:       git
+   location:   https://github.com/killerswan/
+
+executable lab1
+   main-is:          lab1.hs
+   hs-source-dirs:   .
+   build-depends:    base           >= 4 && < 5,
+                     bytestring     >= 0 && < 1,
+                     text           >= 0 && < 1,
+                     containers     >= 0 && < 1
+
+
