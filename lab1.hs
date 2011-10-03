@@ -72,32 +72,46 @@ fileMapWithPath f paths =
 countAndDisplay :: FilePath -> B.ByteString -> IO ()
 countAndDisplay path content =
    let
-      -- align histogram to this column
-      longest :: Int64 -> T.Text -> Int64
-      longest oldLen key | len > hugeWordLim = oldLen
-                         | len > oldLen      = len
-                         | otherwise         = oldLen
-                         where len = T.length key
-   
+      -- get the words and counts
       wordCounts = countWordsInFile content
 
-      sortedWordCounts = sortBy sortFunc $ M.toList wordCounts
+      -- as a list
+      sortedWordCounts =
+         let
+            -- highest frequencies first
+            sortFunc (_,a) (_,b) | a > b     = LT
+                                 | a < b     = GT
+                                 | otherwise = EQ
+         in
+            sortBy sortFunc $ M.toList wordCounts
 
-      -- highest frequencies first
-      sortFunc (_,a) (_,b) | a > b     = LT
-                           | a < b     = GT
-                           | otherwise = EQ
+      -- length of longest word
+      maxWordLen =
+         let
+            -- longest word length so far
+            longest :: Int64 -> T.Text -> Int64
+            longest oldLen key | len > hugeWordLim = oldLen
+                               | len > oldLen      = len
+                               | otherwise         = oldLen
+                               where len = T.length key
+         in
+            foldl longest 0 $ M.keys wordCounts
 
-      maxWordLen = process $ M.keys wordCounts
-                 where process = foldl longest 0
-
-      maxFreq = process $ M.elems wordCounts
-              where process = foldl greaterOf 0
-                    greaterOf f f' = if f' > f then f' else f
+      -- count of most frequent word
+      maxFreq =
+         let
+            greaterOf f f' = if f' > f then f' else f
+         in
+            foldl greaterOf 0 $ M.elems wordCounts
    in
       do
+         -- header
          TIO.putStrLn $ T.pack $ "Statisitics for: " ++ path
+
+         -- print all words
          mapM_ (display maxWordLen maxFreq) sortedWordCounts
+
+         -- blank line
          TIO.putStrLn $ T.pack ""
 
 
