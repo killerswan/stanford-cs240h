@@ -66,8 +66,22 @@ countWordsInFile :: FilePath -> B.ByteString -> IO ()
 countWordsInFile path content =
    let
       ws = (T.words . TE.decodeUtf8) content
+
+      insertCount :: Map T.Text Integer -> T.Text -> Map T.Text Integer
+      insertCount mm w =
+         M.insertWith (+) w 1 mm
+
+      display (k,a) =
+         do 
+            TIO.putStr k
+            putStr   ": "
+            putStrLn $ show a
+            
+      wordCounts = foldl insertCount (M.fromList []) ws
    in
-      sequence_ $ map TIO.putStrLn ws
+      -- sequence_ $ map TIO.putStrLn ws
+      
+      sequence_ $ map display $ M.toList wordCounts
 
 main :: IO ()
 main = 
