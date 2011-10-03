@@ -24,10 +24,17 @@ import System.Environment
 import System.Exit
 import System.IO
 
+
 data Options = Options { }
+
 
 defaultOpts :: Options
 defaultOpts = Options { }
+
+
+hugeWordLim :: Int64
+hugeWordLim = 80 * 75 `div` 100
+
 
 -- command line description
 -- this format is kinda bone headed:
@@ -41,6 +48,7 @@ options = [ Option "h" ["help"]
                         exitWith ExitSuccess)
                    "display this help"
           ]
+
 
 -- apply a function (which uses the path) to a list of files and/or stdin
 fileMapWithPath :: ( FilePath -> B.ByteString -> IO () ) -> [FilePath] -> IO ()
@@ -59,83 +67,78 @@ fileMapWithPath f paths =
             [] -> stdinF
             _  -> mapM_ fileF paths 
 
--- apply a function to a list of files and/or stdin
-fileMap :: ( B.ByteString -> IO () ) -> [FilePath] -> IO ()
-fileMap f paths = fileMapWithPath (\_ -> f) paths
 
-hugeWordLim :: Int64
-hugeWordLim = (80 * 75 `div` 100)
+-- count and then display word frequencies
+countAndDisplay :: FilePath -> B.ByteString -> IO ()
+countAndDisplay path content =
+   let
+      -- align histogram to this column
+      longest :: Int64 -> T.Text -> Int64
+      longest oldLen key | len > hugeWordLim = oldLen
+                         | len > oldLen      = len
+                         | otherwise         = oldLen
+                         where len = T.length key
+   
+      wordCounts = countWordsInFile content
 
-countWordsInFile :: FilePath -> B.ByteString -> IO ()
-countWordsInFile path content =
+      sortedWordCounts = sortBy sortFunc $ M.toList wordCounts
+
+      -- highest frequencies first
+      sortFunc (_,a) (_,b) | a > b     = LT
+                           | a < b     = GT
+                           | otherwise = EQ
+
+      maxWordLen = process $ M.keys wordCounts
+                 where process = foldl longest 0
+
+      maxFreq = process $ M.elems wordCounts
+              where process = foldl greaterOf 0
+                    greaterOf f f' = if f' > f then f' else f
+   in
+      do
+         TIO.putStrLn $ T.pack $ "Statisitics for: " ++ path
+         mapM_ (display maxWordLen maxFreq) sortedWordCounts
+         TIO.putStrLn $ T.pack ""
+
+
+-- count up all the matches of words we find
+countWordsInFile :: B.ByteString -> Map T.Text Integer
+countWordsInFile content =
    let
       ws = (T.words . TE.decodeUtf8) content
 
       insertCount :: Map T.Text Integer -> T.Text -> Map T.Text Integer
-      insertCount mm w =
-         M.insertWith (+) w 1 mm
-
-      wordCounts = foldl insertCount (M.fromList []) ws
-
-      -- align histogram to this column
-      maxKey keys =
-         let
-            longest :: Int64 -> T.Text -> Int64
-            longest oldLen key =
-               let
-                  len = T.length key
-               in
-                  if len > hugeWordLim
-                  then oldLen
-                  else if len > oldLen
-                       then len
-                       else oldLen
-         in
-            foldl longest 0 keys
-
-      -- abclhalsdkjhfaksdjhfalskdjhflaiwueykajndkyivcuzyiueyrwe,mnzcvzsdoifwyeiruwyejfhzsdncvzsdhfriuweyriwuehrfkenzm,cnzkjehwuiyeriwueyhriuwhenm,nzfkhwieuyrwiueh,menwi
-   
-      maxF fs = foldl (\f f' -> if f' > f then f' else f) 0 fs
-
-      maxWordLen = maxKey $ M.keys wordCounts
-
-      maxFreq    = maxF $ M.elems wordCounts
-
-      sortFunc (_,a) (_,b) = if a > b
-                            then LT
-                            else if a < b
-                                 then GT
-                                 else EQ
-
+      insertCount mm w = M.insertWith (+) w 1 mm
    in
-      do
-         TIO.putStrLn $ T.pack $ "Statisitics for: " ++ path
-         
-         let sortedCounts = sortBy sortFunc $ M.toList wordCounts
-         sequence_ $ map (display maxWordLen maxFreq) sortedCounts
-         TIO.putStrLn $ T.pack ""
+      foldl insertCount (M.fromList []) ws
 
+
+-- display one word we found matches for
 display :: Int64 -> Integer -> (T.Text, Integer) -> IO ()
 display maxWordLen maxFrequency (word, freq) =
    let
+      -- pad the word so all the bars line up
       klen = T.length word
       pad  = T.replicate (maxWordLen + 1 - klen) $ T.pack " "
       
-      -- if scaled to 80 per line
+      -- scale things to 80 chars per line
       fullbar   = 80 - maxWordLen - 1
-      scaledbar = ((fromIntegral fullbar) * freq) `div` maxFrequency
+      scaledbar = fromIntegral fullbar * freq `div` maxFrequency
       bar = T.replicate (fromIntegral scaledbar) $ T.pack "#"
 
    in
-      do 
-         when (scaledbar > 0) $ do
-            if klen <= hugeWordLim
+      when (scaledbar > 0) $
+         if klen <= hugeWordLim
             then
+               -- word    ##############
+               -- another ######
                TIO.putStrLn $ T.concat [word, pad, bar]
             else
                do
+                  -- superlongword (not graphed: 4 occurrences)
                   TIO.putStr word
                   TIO.putStrLn $ T.pack $ " (not graphed: " ++ show freq ++ " occurrences)"
+
 
 main :: IO ()
 main = 
@@ -144,6 +147,6 @@ main =
         let (actions, nonOptions, _) = getOpt Permute options args
         _ <- foldl (>>=) (return defaultOpts) actions  -- ignore the options returned
 
-        fileMapWithPath countWordsInFile nonOptions
+        fileMapWithPath countAndDisplay nonOptions
 
 
