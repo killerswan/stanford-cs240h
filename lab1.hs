@@ -143,15 +143,15 @@ display maxWordLen maxFrequency (word, freq) =
    in
       when (scaledbar > 0) $
          if klen <= hugeWordLim
-            then
-               -- word    ##############
-               -- another ######
-               TIO.putStrLn $ T.concat [word, pad, bar]
-            else
-               do
-                  -- superlongword (not graphed: 4 occurrences)
-                  TIO.putStr word
-                  TIO.putStrLn $ T.pack $ " (not graphed: " ++ show freq ++ " occurrences)"
+         then
+            -- word    ##############
+            -- another ######
+            TIO.putStrLn $ T.concat [word, pad, bar]
+         else
+            do
+               -- superlongword (not graphed: 4 occurrences)
+               TIO.putStr word
+               TIO.putStrLn $ T.pack $ " (not graphed: " ++ show freq ++ " occurrences)"
 
 
 main :: IO ()
