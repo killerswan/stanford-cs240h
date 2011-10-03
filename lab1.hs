@@ -12,30 +12,21 @@
 module Main where
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Encoding as E
 import Data.Map (Map)
 import qualified Data.Map as M
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Encoding as TE
+import qualified Data.Text.Lazy.IO as TIO
+import System.Console.GetOpt
 import System.Environment
 import System.Exit
 import System.IO
 import System.IO.Error
-import System.Console.GetOpt
 
+data Options = Options { }
 
--- command line options
-data Options = Options { help      :: Bool
-                       , check     :: Bool
-                       , algorithm :: Integer
-                       }
-
-
--- command line defaults
 defaultOpts :: Options
-defaultOpts = Options { help        = False
-                      , check       = False
-                      , algorithm   = 512
-                      }
+defaultOpts = Options { }
 
 -- command line description
 -- this format is kinda bone headed:
@@ -49,7 +40,6 @@ options = [ Option "h" ["help"]
                         exitWith ExitSuccess)
                    "display this help"
           ]
-
 
 -- apply a function (which uses the path) to a list of files and/or stdin
 fileMapWithPath :: ( FilePath -> B.ByteString -> IO () ) -> [FilePath] -> IO ()
@@ -72,7 +62,12 @@ fileMapWithPath f paths =
 fileMap :: ( B.ByteString -> IO () ) -> [FilePath] -> IO ()
 fileMap f paths = fileMapWithPath (\_ -> f) paths
 
-
+countWordsInFile :: FilePath -> B.ByteString -> IO ()
+countWordsInFile path content =
+   let
+      ws = (T.words . TE.decodeUtf8) content
+   in
+      sequence_ $ map TIO.putStrLn ws
 
 main :: IO ()
 main = 
@@ -80,11 +75,7 @@ main =
         args <- getArgs
         let (actions, nonOptions, _) = getOpt Permute options args
         opts <- foldl (>>=) (return defaultOpts) actions
-        
-        let Options { check     = check'
-                    , algorithm = algorithm'
-                    } = opts
 
-        putStrLn "blah!"
+        fileMapWithPath countWordsInFile nonOptions
 
 
