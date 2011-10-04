@@ -6,7 +6,7 @@
 -- Maintainer  : Kevin Cantu <me@kevincantu.org>
 -- Stability   : experimental
 
-{-# LANGUAGE DoAndIfThenElse #-}  -- also considering: OverloadedStrings
+{-# LANGUAGE DoAndIfThenElse, OverloadedStrings #-}
 
 module Main where
 
@@ -27,10 +27,8 @@ import System.IO
 
 data Options = Options { }
 
-
 defaultOpts :: Options
 defaultOpts = Options { }
-
 
 hugeWordLim :: Int64
 hugeWordLim = 80 * 75 `div` 100
@@ -106,13 +104,13 @@ countAndDisplay path content =
    in
       do
          -- header
-         TIO.putStrLn $ T.pack $ "Statisitics for: " ++ path
+         TIO.putStrLn $ T.append "Statisitics for: " $ T.pack path
 
          -- print all words
          mapM_ (display maxWordLen maxFreq) sortedWordCounts
 
          -- blank line
-         TIO.putStrLn $ T.pack ""
+         TIO.putStrLn ""
 
 
 -- count up all the matches of words we find
@@ -133,12 +131,12 @@ display maxWordLen maxFrequency (word, freq) =
    let
       -- pad the word so all the bars line up
       klen = T.length word
-      pad  = T.replicate (maxWordLen + 1 - klen) $ T.pack " "
+      pad  = T.replicate (maxWordLen + 1 - klen) " "
       
       -- scale things to 80 chars per line
       fullbar   = 80 - maxWordLen - 1
       scaledbar = fromIntegral fullbar * freq `div` maxFrequency
-      bar = T.replicate (fromIntegral scaledbar) $ T.pack "#"
+      bar = T.replicate (fromIntegral scaledbar) "#"
 
    in
       when (scaledbar > 0) $
@@ -151,7 +149,10 @@ display maxWordLen maxFrequency (word, freq) =
             do
                -- superlongword (not graphed: 4 occurrences)
                TIO.putStr word
-               TIO.putStrLn $ T.pack $ " (not graphed: " ++ show freq ++ " occurrences)"
+               TIO.putStrLn $ T.concat [" (not graphed: "
+                                       , T.pack $ show freq
+                                       , " occurrences)"
+                                       ]
 
 
 main :: IO ()
@@ -159,7 +160,7 @@ main =
     do 
         args <- getArgs
         let (actions, nonOptions, _) = getOpt Permute options args
-        _ <- foldl (>>=) (return defaultOpts) actions  -- ignore the options returned
+        _ <- foldl (>>=) (return defaultOpts) actions
 
         fileMapWithPath countAndDisplay nonOptions
 
