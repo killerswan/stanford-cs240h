@@ -25,6 +25,45 @@ import System.Exit
 import System.IO
 
 
+
+
+
+data Pt  = Pt  Integer Integer deriving Show
+data MBR = MBR Pt Pt           deriving Show
+data LHV = LHV Integer         deriving Show
+
+data BranchNode = BranchNode { mbr :: MBR
+                             , info :: String
+                             , leaf :: Leaf
+                             } deriving Show
+
+data LeafNode = LeafNode { mbr :: MBR
+                         , lhv :: LHV
+                         } deriving Show
+
+data Branch = [BranchNode] deriving Show
+data Leaf = [LeafNode] deriving Show
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 data Options = Options { }
 
 defaultOpts :: Options
