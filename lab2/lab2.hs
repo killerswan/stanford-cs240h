@@ -21,6 +21,7 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as TE
 import qualified Data.Text.Lazy.IO as TIO
 -}
+import HilbertCurve
 import System.Console.GetOpt
 import System.Environment
 import System.Exit
@@ -30,7 +31,7 @@ import System.IO
 
 
 
-data Pt  = Pt  Integer Integer deriving (Show, Ord, Eq)
+--data Pt  = Pt  Integer Integer deriving (Show, Ord, Eq)
 data MBR = MBR Pt Pt           deriving (Show, Ord, Eq)
 data LHV = LHV Integer         deriving (Show, Ord, Eq)
 
@@ -53,17 +54,6 @@ instance Ord BranchNode where
 
 data Branch = Leaf [LeafNode]
             | Branch [BranchNode] deriving (Show, Ord, Eq)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
