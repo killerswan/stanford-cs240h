@@ -31,10 +31,99 @@ import System.IO
 
 
 
+
 --data Pt  = Pt  Integer Integer deriving (Show, Ord, Eq)
 data MBR = MBR Pt Pt           deriving (Show, Ord, Eq)
 data LHV = LHV Integer         deriving (Show, Ord, Eq)
 
+-- rename these three later
+type R = MBR
+type H = LHV
+type Details = String
+
+data Tree = Branch R H [Tree]  -- contains branches and leaves
+          | Leaf   R H [Tree]  -- contains only infos
+          | Info   R H Details -- 
+          deriving (Show, Ord, Eq)
+
+
+leafIsFull :: [Tree] -> Bool
+leafIsFull is = length is >= 3
+
+branchIsFull :: [Tree] -> Bool
+branchIsFull is = length is >= 3
+
+
+-- big insert function
+--
+insertT :: Tree -- Info
+        -> Tree -- Existing Leaf or Branch
+        -> Maybe Tree
+
+insertT _ (Info _ _ _) = error "sorry, inserting into an Info makes no sense"
+
+insertT newi (Leaf r h infos) =
+   if leafIsFull infos
+   then Nothing
+   else Just (Leaf r0 h0 infos')
+      where
+         infos' = insert newi infos
+
+insertT newi (Branch r h trees) =
+   let
+      -- yes, this is a zipper... TODO
+      (smallerTs, targetT, biggerTs) =
+         let
+            lessThanH (Info _ h' _) (Branch _ h'' _) = h'' < h'
+            lessThanH (Info _ h' _) (Leaf   _ h'' _) = h'' < h'
+            lessThanH _ _ = error "i am confused: what are you looking for?"
+
+            smallerH' = reverse smallerH
+
+            (smallerH,biggerH) = span (lessThanH newi) trees
+         in
+            case biggerH of
+               t:ts -> (smallerH, t, ts)
+               []   -> (reverse . tail $ smallerH', head . reverse $ smallerH', [])
+               where
+
+      siblings = smallerTs -- TODO: think about this
+      siblingsFull s =
+         let
+            full (Branch _ _ xs) = branchIsFull xs
+            full (Leaf _ _ xs)   = leafIsFull xs
+            full (Info _ _ _)    = error "an Info can't be full or empty"
+         in
+            elem False . map full $ s
+   in
+      -- recursive call
+      case insertT newi targetT of
+         Just t  -> Just $ Branch r0 h0 (concat [smallerTs, [t], biggerTs])
+         Nothing -> -- DUMMY
+                    Just $ Branch r0 h0 [targetT]
+                     --case siblingsFull siblings
+
+
+
+
+
+
+r0 :: MBR
+r0 = MBR (Pt 0 0) (Pt 0 0)
+h0 :: LHV
+h0 = LHV 0
+
+
+
+
+
+
+
+
+
+
+
+{-
 data LeafNode = LeafNode { ln_mbr  :: MBR
                          , ln_lhv  :: LHV
                          , ln_info :: String
@@ -56,6 +145,12 @@ data Branch = Leaf [LeafNode]
             | Branch [BranchNode] deriving (Show, Ord, Eq)
 
 
+
+
+insertLeafNode :: LeafNode -> Branch -> Branch
+
+insertBranchNode :: BranchNode -> Branch -> Branch
+-}
 
 
 
