@@ -35,7 +35,9 @@ coordsToInfo :: String -> Tree
 coordsToInfo coords =
    let
       -- read the coordinates as an array
-      coords' = unfoldr f flatArray
+      coords' = if length flatArray == 8
+                then unfoldr f flatArray
+                else error "I was expecting 4 points..."
               where
                   flatArray = read ("[" ++ coords ++ "]") :: [Integer]
                   f [] = Nothing
@@ -56,8 +58,8 @@ coordsToInfo coords =
                               let
                                  minx' = min minx x
                                  miny' = min miny y
-                                 maxx' = min maxx x
-                                 maxy' = min maxy y
+                                 maxx' = max maxx x
+                                 maxy' = max maxy y
                               in 
                                  MBR (Pt minx' miny') (Pt maxx' maxy')
 
@@ -70,7 +72,6 @@ coordsToInfo coords =
       Info rect h coords
                            
    
-
 
 
 
@@ -107,10 +108,12 @@ main =
       B.putStr . B.concat $ contents
 
 
-      let x = insertHRT (Info r0 h0 "omfg") NewHRT
-      let x' = insertHRT (Info r0 h0 "omfg") x
-      let x'' = insertHRT (Info r0 h0 "omfg") x'
-      let x''' = insertHRT (Info r0 h0 "omfg") x''
+      let insertCoords = insertHRT . coordsToInfo
+
+      let x = insertCoords "3,3,4,5,5,7,98,9" NewHRT
+      let x' = insertCoords "9,7,78,9,9,50000,899,3444" x
+      let x'' = insertCoords "3453,5345,7789,9790,770,8988,8234,64000" x'
+      let x''' = insertCoords "304,28340,3450,534,60000,27,3450,3453" x''
 
       putStrLn $ show x
       putStrLn $ show x'
