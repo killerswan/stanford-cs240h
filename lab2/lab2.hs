@@ -66,20 +66,18 @@ insertT :: Tree -- Info
 
 insertT _ (Info _ _ _) = error "sorry, inserting into an Info makes no sense"
 
-insertT newi (Leaf r h infos) =
+insertT newi (Leaf _ _ infos) =
    if leafIsNotFull infos
-   then Just (Leaf r0 h0 infos')
+   then Just $ children2Tree $ insert newi infos
    else Nothing
-      where
-         infos' = insert newi infos
 
-insertT newi thisBranch@(Branch r h trees) =
+insertT newi (Branch _ _ trees) =
    let
       -- yes, this is a zipper... TODO
       (smallerTs, targetT, biggerTs) =
          let
-            lessThanH (Info _ h' _) (Branch _ h'' _) = h'' < h'
-            lessThanH (Info _ h' _) (Leaf   _ h'' _) = h'' < h'
+            lessThanH (Info _ h' _) (Branch _ h'' _) = h' > h''
+            lessThanH (Info _ h' _) (Leaf   _ h'' _) = h' > h''
             lessThanH _ _ = error "i am confused: what are you looking for?"
 
             (smallerH, biggerH) = span (lessThanH newi) trees
@@ -99,8 +97,8 @@ insertT newi thisBranch@(Branch r h trees) =
          in
             elem True . map notFull $ s
 
-      addEmptySibling bs@((Branch _ _ _):bs') = Branch r0 h0 [] : bs
-      addEmptySibling ls@((Leaf   _ _ _):ls') = Leaf   r0 h0 [] : ls
+      addEmptySibling bs@(Branch _ _ _:_) = Branch r0 h0 [] : bs
+      addEmptySibling ls@(Leaf   _ _ _:_) = Leaf   r0 h0 [] : ls
       addEmptySibling _ = error "sorry, new empty siblings of Info make no sense"
 
    in
@@ -111,29 +109,97 @@ insertT newi thisBranch@(Branch r h trees) =
 
          _  ->
             case insertT newi targetT of
-               Just t  -> Just $ Branch r0 h0 (concat [smallerTs, [t], biggerTs])
+               Just t  -> Just $ children2Tree $ concat [smallerTs, [t], biggerTs]
+
                           -- insertT (Info r0 h0 "wtf") (Leaf r0 h0 [])
+                          -- insertT (Info r0 h0 "wtf") (Branch r0 h0 [Leaf r0 h0 []])
 
                Nothing ->
                   case siblingsNotFull siblings of
-                     True  -> Just $ Branch r0 h0 (shuffleInsert newi siblings)
-                              -- insertT (Info r0 h0 "wtf") (Branch r0 h0 [Leaf r0 h0 []])
-
+                     True  -> insertT newi . children2Tree $ shuffle siblings
                      False ->
                         case branchIsNotFull trees of
                            True  -> -- question: how can I guarantee this will give
                                     --           my target tree free space for the recursive call?
-                                    insertT newi $ Branch r0 h0 (shuffle (addEmptySibling trees))
+                                    --
 
-                                    --  insertT (Info r0 h0 "wtf") (Branch r0 h0 [Leaf r0 h0 [Info r0 h0 "existing 0", Info r0 h0 "existing 1", Info r0 h0 "existing 2"]])
+                                    insertT newi . children2Tree . shuffle $ addEmptySibling trees
+
+                                    --  insertT (Info r0 h0 "wtf")
+                                    --          (Branch r0 h0
+                                    --             [Leaf r0 h0
+                                    --                [Info r0 h0 "existing 0",
+                                    --                 Info r0 h0 "existing 1",
+                                    --                 Info r0 h0 "existing 2"]])
+
                            False -> Nothing
 
 
+trees2children :: [Tree] -- parents
+                        -> [Tree] -- children
+trees2children parents = unwrap' =<< parents
+                    where
+                       unwrap' (Branch _ _ children) = children
+                       unwrap' (Leaf _ _ children) = children
+                       unwrap' (Info _ _ _) = error "unwrapping an info makes no sense"
 
 
-shuffleInsert i a = a
-shuffle a  = a
+-- this seems ugly
+collectR :: [Tree] -> MBR
+collectR cs =
+   let
+      f r' (Info   r _ _) = maxRect r r'
+      f r' (Leaf   r _ _) = maxRect r r'
+      f r' (Branch r _ _) = maxRect r r'
 
+      maxRect (MBR (Pt x0 x1) (Pt y0 y1))
+              (MBR (Pt x0' x1') (Pt y0' y1')) = MBR (Pt (min x0 x0') (min x1 x1'))
+                                                    (Pt (max y0 y0') (max y1 y1'))
+   in
+      foldl f r0 cs
+
+
+collectH :: [Tree] -> LHV
+collectH cs = foldl f h0 cs
+            where
+               f h' (Info   _ h _) = max h h'
+               f h' (Leaf   _ h _) = max h h'
+               f h' (Branch _ h _) = max h h'
+
+
+children2Tree :: [Tree] -> Tree
+children2Tree children =
+   let
+      f cs@(Info   _ _ _ : _) = Leaf   r h cs
+      f cs@(Leaf   _ _ _ : _) = Branch r h cs
+      f cs@(Branch _ _ _ : _) = Branch r h cs
+      f [] = error "empty tree makes no sense here..."
+
+      r = collectR children
+      h = collectH children
+   in
+      f children
+
+
+
+shuffle :: [Tree] -- parents to shuffle
+        -> [Tree]
+shuffle trees =
+   let
+      children = trees2children trees
+      trees' = unfoldr f children
+             where
+               len = length children `div` length trees
+               f [] = Nothing
+               f xs = Just (splitAt len xs)
+   in
+      map children2Tree trees'
+      {- test:
+      shuffle [Leaf r0 h0 [], 
+               Leaf r0 h0 [Info (MBR (Pt 15 18) (Pt 37 29)) (LHV 67) "zzzzz",
+                           Info r0 (LHV 90) "aaa"],
+               Leaf r0 (LHV 9000) [Info r0 (LHV 700) "bbbbb"]]
+      -}
 
 
 
@@ -141,51 +207,6 @@ r0 :: MBR
 r0 = MBR (Pt 0 0) (Pt 0 0)
 h0 :: LHV
 h0 = LHV 0
-
-
-
-
-
-
-
-
-
-
-
-{-
-data LeafNode = LeafNode { ln_mbr  :: MBR
-                         , ln_lhv  :: LHV
-                         , ln_info :: String
-                         } deriving (Show, Eq)
-
-instance Ord LeafNode where
-   -- this way, we can use `insert` to put each node into the list
-   (<=) x y = ln_lhv x <= ln_lhv y
-
-data BranchNode = BranchNode { bn_mbr  :: MBR
-                             , bn_lhv  :: LHV
-                             , bn_leaf :: Branch
-                             } deriving (Show, Eq)
-
-instance Ord BranchNode where
-   (<=) x y = bn_lhv x <= bn_lhv y
-
-data Branch = Leaf [LeafNode]
-            | Branch [BranchNode] deriving (Show, Ord, Eq)
-
-
-
-
-insertLeafNode :: LeafNode -> Branch -> Branch
-
-insertBranchNode :: BranchNode -> Branch -> Branch
--}
-
-
-
-
-
-
 
 
 
