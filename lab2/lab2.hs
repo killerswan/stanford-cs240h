@@ -12,8 +12,8 @@ module Main where
 
 --import Control.Monad (when)
 import qualified Data.ByteString.Lazy as B
-{-
 import Data.List
+{-
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -30,6 +30,46 @@ import System.Exit
 import System.IO
 
 
+
+coordsToInfo :: String -> Tree
+coordsToInfo coords =
+   let
+      -- read the coordinates as an array
+      coords' = unfoldr f flatArray
+              where
+                  flatArray = read ("[" ++ coords ++ "]") :: [Integer]
+                  f [] = Nothing
+                  f xs = case length xs `mod` 2 of
+                           0 -> Just (tup $ splitAt 2 xs)
+                           _ -> error "this object path is junk"
+                  tup (xy, r) = (Pt (xy !! 0) (xy !! 1), r)
+
+
+      -- function to calculate bounding rectangle
+      -- of many points
+      bounding :: [Pt] -> MBR
+      bounding [] = error "there is no bounding rectangle of an empty coordinate"
+      bounding cs@(c:_) = foldl maxR (toRect c) cs
+                       where
+                           toRect (Pt x y) = MBR (Pt x y) (Pt x y)
+                           maxR (MBR (Pt minx miny) (Pt maxx maxy)) (Pt x y) =
+                              let
+                                 minx' = min minx x
+                                 miny' = min miny y
+                                 maxx' = min maxx x
+                                 maxy' = min maxy y
+                              in 
+                                 MBR (Pt minx' miny') (Pt maxx' maxy')
+
+      center :: MBR -> Pt
+      center (MBR (Pt x y) (Pt x' y')) = Pt (div (x+x') 2) (div (y+y') 2)
+
+      rect = bounding coords'
+      h = LHV $ hilbert $ center rect
+   in
+      Info rect h coords
+                           
+   
 
 
 
