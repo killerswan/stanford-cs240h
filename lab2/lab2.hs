@@ -10,7 +10,7 @@
 
 module Main where
 
---import Control.Monad (when)
+import Control.Monad (forever) -- (when)
 import qualified Data.ByteString.Lazy as B
 import Data.List
 {-
@@ -127,12 +127,16 @@ main =
 
       let coordinateList = map T.unpack . T.lines . TE.decodeUtf8 . B.concat $ contents :: [String]
 
-      let result = foldl (\hrt line -> insertCoords line hrt) NewHRT coordinateList
-      -- with no arguments, empty list, so NewHRT
-      -- called with :main rects.txt, then long result...
+      -- read and insert each line of coordinates
+      let hrt = foldl (\hrt' line -> insertCoords line hrt') NewHRT coordinateList
       
-      putStrLn $ show result
+      forever $ do
+         putStr ">>> "
 
+         query <- getLine
+         putStrLn query
+      
 
+      
 
 
