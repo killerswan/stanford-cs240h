@@ -48,9 +48,9 @@ data Tree = Branch R H [Tree]  -- contains branches and leaves
           | Info   R H Details -- 
           deriving (Show, Ord, Eq)
 
-data TreeRoot = Root Tree
-              | NewRoot
-              deriving (Show, Ord, Eq)
+data HilbertRTree = Root Tree
+                  | NewHRT
+                  deriving (Show, Ord, Eq)
 
 
 
@@ -60,27 +60,26 @@ leafIsNotFull s = length s < 3
 branchIsNotFull :: [Tree] -> Bool
 branchIsNotFull s = length s < 3
 
-emptyLeaf :: Tree
-emptyLeaf = Leaf (MBR (Pt 0 0) (Pt 0 0)) (LHV 0) []
 
--- insert into root
-insertTRoot :: Tree -- Info
-            -> TreeRoot
-            -> TreeRoot
+-- simple insert function for Hilbert R Trees
+-- at the root level
+insertHRT :: Tree -- Info
+            -> HilbertRTree
+            -> HilbertRTree
 
-insertTRoot newi NewRoot = insertTRoot newi (Root emptyLeaf)
+insertHRT newi NewHRT = insertHRT newi (Root emptyLeaf) -- insertion will overwrite R and H
+                      where emptyLeaf = Leaf (MBR (Pt 0 0) (Pt 0 0)) (LHV 0) []
 
-insertTRoot newi (Root tree) =
+insertHRT newi (Root tree) =
    case insertT newi tree of
       Just tree' -> Root tree'
-      Nothing -> case insertT newi (Branch r0 h0 [tree]) of
+      Nothing -> case insertT newi (Branch r0 h0 [tree]) of -- insertion will overwrite R and H
                    Just tree'' -> Root tree''
                    Nothing -> error "seriously, wtf"
               
 
 
--- big insert function
---
+-- big insert function for Trees, recursively
 insertT :: Tree -- Info
         -> Tree -- Existing Leaf or Branch
         -> Maybe Tree
