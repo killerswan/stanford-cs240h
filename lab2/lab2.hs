@@ -17,10 +17,11 @@ import Data.List
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Encoding as TE
 import qualified Data.Text.Lazy.IO as TIO
 -}
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Encoding as TE
+
 import HilbertCoordinates  -- lab2
 import HilbertCurve        -- lab2
 import HilbertRTree        -- lab2
@@ -105,11 +106,14 @@ main =
       let files = nonOptions
 
       contents <- mapM B.readFile files
-      B.putStr . B.concat $ contents
 
+      -- file testing
+      --B.putStr . B.concat $ contents
 
       let insertCoords = insertHRT . coordsToInfo
 
+      -- coordinate testing
+{-
       let x = insertCoords "3,3,4,5,5,7,98,9" NewHRT
       let x' = insertCoords "9,7,78,9,9,50000,899,3444" x
       let x'' = insertCoords "3453,5345,7789,9790,770,8988,8234,64000" x'
@@ -119,5 +123,16 @@ main =
       putStrLn $ show x'
       putStrLn $ show x''
       putStrLn $ show x'''
+-}
+
+      let coordinateList = map T.unpack . T.lines . TE.decodeUtf8 . B.concat $ contents :: [String]
+
+      let result = foldl (\hrt line -> insertCoords line hrt) NewHRT coordinateList
+      -- with no arguments, empty list, so NewHRT
+      -- called with :main rects.txt, then long result...
+      
+      putStrLn $ show result
+
+
 
 
