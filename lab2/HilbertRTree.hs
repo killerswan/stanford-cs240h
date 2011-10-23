@@ -1,20 +1,18 @@
--- |
--- Module      : Main
--- Copyright   : (c) 2011 Kevin Cantu
---
--- License     : BSD-style
--- Maintainer  : Kevin Cantu <me@kevincantu.org>
--- Stability   : experimental
+-- Copyright (c) 2011 Kevin Cantu
 
-module HilbertRTree (HilbertRTree(NewHRT), Tree(Info), insertHRT, searchHRT) where
+module HilbertRTree  ( HilbertRTree(NewHRT)
+                     , Tree(Info)
+                     , insertHRT
+                     , searchHRT
+                     ) where
 
 import HilbertCoordinates
 import Data.List
 
 -- Hilbert H Tree
-data Tree = Branch R H [Tree] -- contains branches and leaves
-          | Leaf   R H [Tree] -- contains only infos
-          | Info   R H String --
+data Tree = Branch MBR LHV [Tree] -- contains branches and leaves
+          | Leaf   MBR LHV [Tree] -- contains only infos
+          | Info   MBR LHV String --
           deriving (Show, Ord, Eq)
 
 data HilbertRTree = Root Tree
@@ -30,7 +28,7 @@ branchIsNotFull s = length s < 3
 
 
 trees2children :: [Tree] -- parents
-                        -> [Tree] -- children
+               -> [Tree] -- children
 trees2children parents = unwrap' =<< parents
                     where
                        unwrap' (Branch _ _ children) = children
@@ -145,8 +143,9 @@ insertT newi (Branch _ _ trees) =
          in
             elem True . map notFull $ s
 
-      addEmptySibling bs@(Branch _ _ _:_) = Branch r0 h0 [] : bs
-      addEmptySibling ls@(Leaf   _ _ _:_) = Leaf   r0 h0 [] : ls
+      ee = error "this shouldn't be reached #A"
+      addEmptySibling bs@(Branch _ _ _:_) = Branch ee ee [] : bs
+      addEmptySibling ls@(Leaf   _ _ _:_) = Leaf   ee ee [] : ls
       addEmptySibling _ = error "sorry, new empty siblings of Info make no sense"
 
    in
@@ -214,16 +213,21 @@ searchHRT _ NewHRT = []
 -- point intersecting a rectangle
 intersectPt :: Pt -> MBR -> Bool
 intersectPt (Pt a b) (MBR (Pt x y) (Pt x' y')) = 
-   x <= a || a <= x' && 
-   y <= b || b <= y' 
+   x <= a && a <= x' && 
+   y <= b && b <= y'
 
 -- rectangle overlapping
-intersectRect :: MBR -> MBR -> Bool
-intersectRect (MBR (Pt x y) (Pt x' y')) rect =
-   intersectPt (Pt x  y ) rect ||
-   intersectPt (Pt x' y') rect ||
-   intersectPt (Pt x  y') rect ||
-   intersectPt (Pt x' y ) rect
+mutualIntersectRect :: MBR -> MBR -> Bool
+mutualIntersectRect a b =
+   let
+      intersectRect (MBR (Pt x y) (Pt x' y')) rect =
+         intersectPt (Pt x  y ) rect ||
+         intersectPt (Pt x' y') rect ||
+         intersectPt (Pt x  y') rect ||
+         intersectPt (Pt x' y ) rect
+   in
+      intersectRect a b || intersectRect b a
+
 
 getR :: Tree -> MBR
 getR (Info   x _ _) = x
@@ -234,15 +238,12 @@ searchT :: MBR -> Tree -> [Tree]
 searchT r (Branch _ _ trees) =
    let
       f :: [Tree] -> [Tree]
-      f = filter (intersectRect r . getR)
+      f = filter (mutualIntersectRect r . getR)
    in
-      (searchT r) =<< f trees
+      searchT r =<< f trees
 
-searchT r (Leaf _ _ infos) = filter (intersectRect r . getR) infos
+searchT r (Leaf _ _ infos) = filter (mutualIntersectRect r . getR) infos
 
 searchT _ (Info _ _ _) = error "actually, we're not recursing that far, but maybe later..."
    
-              
-
-
 

@@ -1,12 +1,6 @@
--- |
--- Module      : Main
--- Copyright   : (c) 2011 Kevin Cantu
---
--- License     : BSD-style
--- Maintainer  : Kevin Cantu <me@kevincantu.org>
--- Stability   : experimental
+-- Copyright (c) 2011 Kevin Cantu
 
-module HilbertCurve (Rect(..), Pt(..), hilbert) where
+module HilbertCurve (Rect(..), Pt(..), hilbertValue) where
 
 import HilbertCoordinates
 
@@ -28,8 +22,7 @@ data Rect = Rect Pt Pt deriving (Eq, Ord, Show)
 
 -- find which quadrant this point is in
 quadrant :: Rect -> Pt -> Quadrant
-quadrant (Rect (Pt ax ay) (Pt cx cy)) (Pt x y) =
-   let
+quadrant (Rect (Pt ax ay) (Pt cx cy)) (Pt x y) = let
       topHalf a b c = abs (b - a) > abs (c - b)
    in
       case (topHalf ax x cx, topHalf ay y cy) of
@@ -66,14 +59,13 @@ rotatePoint (Pt x y) q =
 -- by stepping through the fractal to a desired resolution.
 -- At each step, the quadrant in which we find the point
 -- is rotated and split again.
-hilbert' :: Integer  -- desired order of hilbert curve
+hilbertValue' :: Integer  -- desired order of hilbert curve
          -> Integer  -- current order
          -> Integer  -- position at previous order
          -> Rect     -- corners of previous quadrant
          -> Pt       -- actual coordinate
          -> Integer  -- hilbert position
-hilbert' targetOrder order prevHilbert r p =
-   -- TODO: need to bounds check the point...
+hilbertValue' targetOrder order prevHilbert r p =
    let
       q  = quadrant r p         -- find where x,y is
       r' = rotateCorners r q    -- get corners of that quadrant
@@ -83,16 +75,23 @@ hilbert' targetOrder order prevHilbert r p =
       -- have we gone far enough?
       if order >= targetOrder
       then h
-      else hilbert' targetOrder (order + 1) h r' p'
+      else hilbertValue' targetOrder (order + 1) h r' p'
 
 -- find a point's location on hilbert curve
-hilbert :: Pt -> Integer
-hilbert p = hilbert' hilbertOrder initialOrder hilbert0 (Rect a c) p
-          where
-            initialOrder = 1
-            hilbert0     = 0
-            a            = Pt 0 0
-            c            = Pt 65536 65536
-            hilbertOrder = 4  -- total quadrants: 4 ^ hilbertOrder
+hilbertValue :: Pt -> Integer
+hilbertValue p@(Pt px py) =
+   let
+      initialOrder = 1
+      hilbert0     = 0
+      a@(Pt ax ay) = Pt 0 0
+      c@(Pt cx cy) = Pt 65536 65536
+      hilbertOrder = 4  -- total quadrants: 4 ^ hilbertOrder
+
+      inBounds = ax <= px && px <= cx &&
+                 ay <= py && py <= cy
+   in
+      if not inBounds
+      then error $ "out of bounds: " ++ show p
+      else hilbertValue' hilbertOrder initialOrder hilbert0 (Rect a c) p
 
 

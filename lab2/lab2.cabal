@@ -1,9 +1,14 @@
 name:                cs240h-lab2
 version:             1.0
-synopsis:            Word frequency counting
+synopsis:            the Hilbert R-tree
 description:         
     .
-    An implementation of Lab 1: http://www.scs.stanford.edu/11au-cs240h/labs/lab1.html
+    An implementation of Lab 2:
+    http://www.scs.stanford.edu/11au-cs240h/labs/lab2.html.
+    .
+    This lab relies on an R-tree built using a Hilbert curve as
+    described in Kamel and Faloutsos's paper:
+    http://www.cis.temple.edu/~vasilis/Courses/CIS750/Papers/HilbertRtree-Kamel.pdf
     .
 category:            School
 stability:           experimental
@@ -28,6 +33,8 @@ executable lab2
    build-depends:    base           >= 4 && < 5,
                      bytestring     >= 0 && < 1,
                      text           >= 0 && < 1,
-                     containers     >= 0 && < 1
+                     containers     >= 0 && < 1,
+                     time,
+                     rdtsc
 
 
