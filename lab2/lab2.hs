@@ -10,6 +10,8 @@
 
 module Main where
 
+--import Prelude hiding (catch)
+--import Control.Exception
 import Control.Monad (forever) -- (when)
 import qualified Data.ByteString.Lazy as B
 import Data.List
@@ -32,8 +34,8 @@ import System.IO
 
 
 
-coordsToInfo :: String -> Tree
-coordsToInfo coords =
+coordsToRect :: String -> MBR
+coordsToRect coords =
    let
       -- read the coordinates as an array
       coords' = if length flatArray == 8
@@ -63,11 +65,18 @@ coordsToInfo coords =
                                  maxy' = max maxy y
                               in 
                                  MBR (Pt minx' miny') (Pt maxx' maxy')
+   in
+      bounding coords'
+
+
+coordsToInfo :: String -> Tree
+coordsToInfo coords =
+   let
+      rect = coordsToRect coords
 
       center :: MBR -> Pt
       center (MBR (Pt x y) (Pt x' y')) = Pt (div (x+x') 2) (div (y+y') 2)
 
-      rect = bounding coords'
       h = LHV $ hilbert $ center rect
    in
       Info rect h coords
@@ -110,7 +119,6 @@ main =
       -- file testing
       --B.putStr . B.concat $ contents
 
-      let insertCoords = insertHRT . coordsToInfo
 
       -- coordinate testing
 {-
@@ -128,15 +136,25 @@ main =
       let coordinateList = map T.unpack . T.lines . TE.decodeUtf8 . B.concat $ contents :: [String]
 
       -- read and insert each line of coordinates
+      let insertCoords = insertHRT . coordsToInfo
       let hrt = foldl (\hrt' line -> insertCoords line hrt') NewHRT coordinateList
       
-      forever $ do
-         putStr ">>> "
 
-         query <- getLine
-         putStrLn query
-      
+      forever (runQuery hrt)
 
-      
+
+runQuery hrt = 
+   do
+      putStr ">>> "
+      hFlush stdout -- seriously?
+      query <- getLine
+
+      let found = map getStr . take 4 . searchHRT (coordsToRect query) $ hrt
+                where
+                  getStr (Info _ _ str) = str
+                  getStr _ = error "what did we return, a Branch or Leaf?!"
+
+      putStrLn $ "found " ++ (show . length $ found) ++ " matches in " ++ "XXXX" ++ " microseconds:"
+      mapM_ (\ss -> putStrLn $ "    " ++ ss) found
 
 
