@@ -85,7 +85,7 @@ hilbertValue p@(Pt px py) =
       hilbert0     = 0
       a@(Pt ax ay) = Pt 0 0
       c@(Pt cx cy) = Pt 65536 65536
-      hilbertOrder = 4  -- total quadrants: 4 ^ hilbertOrder
+      hilbertOrder = 12  -- total quadrants: 4 ^ hilbertOrder
 
       inBounds = ax <= px && px <= cx &&
                  ay <= py && py <= cy
