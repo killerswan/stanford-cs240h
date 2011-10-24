@@ -1,6 +1,7 @@
 -- Copyright (c) 2011 Kevin Cantu
 
-module HilbertCurve (Rect(..), Pt(..), hilbertValue) where
+module HilbertCurve ( hilbertValue
+                    ) where
 
 import HilbertCoordinates
 
@@ -17,8 +18,6 @@ quad2num q = case q of
                NW -> 1
                NE -> 2
                SE -> 3
-
-data Rect = Rect Pt Pt deriving (Eq, Ord, Show)
 
 -- find which quadrant this point is in
 quadrant :: Rect -> Pt -> Quadrant
@@ -84,11 +83,11 @@ hilbertValue p@(Pt px py) =
       initialOrder = 1
       hilbert0     = 0
       a@(Pt ax ay) = Pt 0 0
-      c@(Pt cx cy) = Pt 65536 65536
+      c@(Pt cx cy) = Pt 65536 65536  -- like Word16
       hilbertOrder = 12  -- total quadrants: 4 ^ hilbertOrder
 
-      inBounds = ax <= px && px <= cx &&
-                 ay <= py && py <= cy
+      inBounds = ax <= px && px < cx &&
+                 ay <= py && py < cy
    in
       if not inBounds
       then error $ "out of bounds: " ++ show p

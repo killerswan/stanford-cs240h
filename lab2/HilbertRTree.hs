@@ -1,18 +1,18 @@
 -- Copyright (c) 2011 Kevin Cantu
 
-module HilbertRTree  ( HilbertRTree(NewHRT)
-                     , Tree(Info)
-                     , insertHRT
-                     , searchHRT
-                     ) where
+module HilbertRTree ( HilbertRTree(NewHRT)
+                    , Tree(Info)
+                    , insertHRT
+                    , searchHRT
+                    ) where
 
 import HilbertCoordinates
 import Data.List
 
 -- Hilbert H Tree
-data Tree = Branch MBR LHV [Tree] -- contains branches and leaves
-          | Leaf   MBR LHV [Tree] -- contains only infos
-          | Info   MBR LHV String --
+data Tree = Branch Rect LHV [Tree] -- contains branches and leaves
+          | Leaf   Rect LHV [Tree] -- contains only infos
+          | Info   Rect LHV String --
           deriving (Show, Ord, Eq)
 
 data HilbertRTree = Root Tree
@@ -37,7 +37,7 @@ trees2children parents = unwrap' =<< parents
 
 
 -- this seems ugly
-collectR :: [Tree] -> MBR
+collectR :: [Tree] -> Rect
 collectR [] = error "the MBR of nothing is an error"
 collectR (c:cs) =
    let
@@ -49,8 +49,8 @@ collectR (c:cs) =
       r0' (Leaf   r _ _) = r
       r0' (Branch r _ _) = r
 
-      maxRect (MBR (Pt x0 x1) (Pt y0 y1))
-              (MBR (Pt x0' x1') (Pt y0' y1')) = MBR (Pt (min x0 x0') (min x1 x1'))
+      maxRect (Rect (Pt x0 x1) (Pt y0 y1))
+              (Rect (Pt x0' x1') (Pt y0' y1')) = Rect (Pt (min x0 x0') (min x1 x1'))
                                                     (Pt (max y0 y0') (max y1 y1'))
    in
       foldl f (r0' c) cs
@@ -97,12 +97,6 @@ shuffle trees =
                f xs = Just (splitAt len xs)
    in
       map children2Tree trees'
-      {- test:
-      shuffle [Leaf r0 h0 [], 
-               Leaf r0 h0 [Info (MBR (Pt 15 18) (Pt 37 29)) (LHV 67) "zzzzz",
-                           Info r0 (LHV 90) "aaa"],
-               Leaf r0 (LHV 9000) [Info r0 (LHV 700) "bbbbb"]]
-      -}
 
 
 -- big insert function for Trees, recursively
@@ -152,15 +146,9 @@ insertT newi (Branch _ _ trees) =
       -- recursive call
       case trees of
          [] -> Nothing
-               -- insertT (Info r0 h0 "wtf") (Branch r0 h0 [])
-
          _  ->
             case insertT newi targetT of
                Just t  -> Just $ children2Tree $ concat [smallerTs, [t], biggerTs]
-
-                          -- insertT (Info r0 h0 "wtf") (Leaf r0 h0 [])
-                          -- insertT (Info r0 h0 "wtf") (Branch r0 h0 [Leaf r0 h0 []])
-
                Nothing ->
                   case siblingsNotFull siblings of
                      True  -> insertT newi . children2Tree $ shuffle siblings
@@ -172,14 +160,6 @@ insertT newi (Branch _ _ trees) =
                                     --
 
                                     insertT newi . children2Tree . shuffle $ addEmptySibling trees
-
-                                    --  insertT (Info r0 h0 "wtf")
-                                    --          (Branch r0 h0
-                                    --             [Leaf r0 h0
-                                    --                [Info r0 h0 "existing 0",
-                                    --                 Info r0 h0 "existing 1",
-                                    --                 Info r0 h0 "existing 2"]])
-
 
 
 -- simple insert function for Hilbert R Trees
@@ -203,24 +183,26 @@ insertHRT newi@(Info r h _) (Root tree) =
 
 
 -- query a Hilbert R Tree and return four values
-searchHRT :: MBR          -- rectangle query
+searchHRT :: Rect          -- rectangle query
           -> HilbertRTree -- existing tree
           -> [Tree]       -- first infos overlapped by this box
 
+searchHRT _ NewHRT      = []
 searchHRT r (Root tree) = searchT r tree -- possibly limit to (take 4)
-searchHRT _ NewHRT = []
+
 
 -- point intersecting a rectangle
-intersectPt :: Pt -> MBR -> Bool
-intersectPt (Pt a b) (MBR (Pt x y) (Pt x' y')) = 
+intersectPt :: Pt -> Rect -> Bool
+intersectPt (Pt a b) (Rect (Pt x y) (Pt x' y')) = 
    x <= a && a <= x' && 
    y <= b && b <= y'
 
+
 -- rectangle overlapping
-mutualIntersectRect :: MBR -> MBR -> Bool
+mutualIntersectRect :: Rect -> Rect -> Bool
 mutualIntersectRect a b =
    let
-      intersectRect (MBR (Pt x y) (Pt x' y')) rect =
+      intersectRect (Rect (Pt x y) (Pt x' y')) rect =
          intersectPt (Pt x  y ) rect ||
          intersectPt (Pt x' y') rect ||
          intersectPt (Pt x  y') rect ||
@@ -229,12 +211,15 @@ mutualIntersectRect a b =
       intersectRect a b || intersectRect b a
 
 
-getR :: Tree -> MBR
+getR :: Tree -> Rect
 getR (Info   x _ _) = x
 getR (Leaf   x _ _) = x
 getR (Branch x _ _) = x
 
-searchT :: MBR -> Tree -> [Tree]
+
+searchT :: Rect -> Tree -> [Tree]
+searchT _ (Info _ _ _)       = error "searchT doesn't work on Info yet..."
+searchT r (Leaf _ _ infos)   = filter (mutualIntersectRect r . getR) infos
 searchT r (Branch _ _ trees) =
    let
       f :: [Tree] -> [Tree]
@@ -242,8 +227,4 @@ searchT r (Branch _ _ trees) =
    in
       searchT r =<< f trees
 
-searchT r (Leaf _ _ infos) = filter (mutualIntersectRect r . getR) infos
-
-searchT _ (Info _ _ _) = error "actually, we're not recursing that far, but maybe later..."
    
-

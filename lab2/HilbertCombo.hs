@@ -1,6 +1,9 @@
 -- Copyright (c) 2011 Kevin Cantu
 
-module HilbertCombo (hrtFromCoordList, hrtSearchWithCoord, HilbertRTree) where
+module HilbertCombo ( hrtFromCoordList
+                    , hrtSearchWithCoord
+                    , HilbertRTree() -- re-export
+                    ) where
 
 import Data.List
 import HilbertCoordinates  -- lab2
@@ -29,25 +32,25 @@ readPoints coords =
 
 -- function to calculate bounding rectangle
 -- of many points
-pointsToRect :: [Pt] -> MBR
+pointsToRect :: [Pt] -> Rect
 pointsToRect []       = error "there is no bounding rectangle of an empty coordinate"
 pointsToRect cs@(c:_) =
    let
-      toRect (Pt x y) = MBR (Pt x y) (Pt x y)
+      toRect (Pt x y) = Rect (Pt x y) (Pt x y)
 
-      maxR (MBR (Pt minx miny) (Pt maxx maxy)) (Pt x y) =
+      maxR (Rect (Pt minx miny) (Pt maxx maxy)) (Pt x y) =
          let
             minx' = min minx x
             miny' = min miny y
             maxx' = max maxx x
             maxy' = max maxy y
          in 
-            MBR (Pt minx' miny') (Pt maxx' maxy')
+            Rect (Pt minx' miny') (Pt maxx' maxy')
    in
       foldl maxR (toRect c) cs
 
 
-coordsToRect :: String -> MBR
+coordsToRect :: String -> Rect
 coordsToRect =
    pointsToRect . readPoints
 
@@ -57,8 +60,8 @@ coordsToInfo coords =
    let
       rect = coordsToRect coords
 
-      center :: MBR -> Pt
-      center (MBR (Pt x y) (Pt x' y')) = Pt (div (x+x') 2) (div (y+y') 2)
+      center :: Rect -> Pt
+      center (Rect (Pt x y) (Pt x' y')) = Pt (div (x+x') 2) (div (y+y') 2)
 
       h = LHV $ hilbertValue $ center rect
    in
