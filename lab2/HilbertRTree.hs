@@ -4,6 +4,8 @@ module HilbertRTree ( HilbertRTree(NewHRT)
                     , Tree(Info)
                     , insertHRT
                     , searchHRT
+                    , intersectPt
+                    , mutualIntersectRect
                     ) where
 
 import HilbertCoordinates
@@ -127,7 +129,14 @@ insertT newi (Branch _ _ trees) =
                (s:ss, tts) -> (reverse ss, s, tts)
                (_, _)      -> error "well, this is an empty list..."
 
-      siblings = smallerTs -- TODO: think about this
+      -- It is necessary that the number of new free spots created
+      -- when a new item is added guarantees that the next insert 
+      -- will succeed.
+      -- One way is to make sure that the number of spots per subtree
+      -- equals the number of subtrees minus one.
+      -- So here I am going to make all peers into siblings,
+      -- rather than split along the lines of smaller/greater and target.
+      (siblings, nonSiblings) = (trees, [])
 
       siblingsNotFull s =
          let
@@ -151,15 +160,14 @@ insertT newi (Branch _ _ trees) =
                Just t  -> Just $ children2Tree $ concat [smallerTs, [t], biggerTs]
                Nothing ->
                   case siblingsNotFull siblings of
-                     True  -> insertT newi . children2Tree $ shuffle siblings
+                     True  -> insertT newi . children2Tree $ concat [shuffle siblings, nonSiblings]
                      False ->
                         case branchIsNotFull trees of
                            False -> Nothing
                            True  -> -- question: how can I guarantee this will give
                                     --           my target tree free space for the recursive call?
                                     --
-
-                                    insertT newi . children2Tree . shuffle $ addEmptySibling trees
+                                    insertT newi . children2Tree . concat $ [shuffle (addEmptySibling siblings), nonSiblings]
 
 
 -- simple insert function for Hilbert R Trees
@@ -183,7 +191,7 @@ insertHRT newi@(Info r h _) (Root tree) =
 
 
 -- query a Hilbert R Tree and return four values
-searchHRT :: Rect          -- rectangle query
+searchHRT :: Rect         -- rectangle query
           -> HilbertRTree -- existing tree
           -> [Tree]       -- first infos overlapped by this box
 

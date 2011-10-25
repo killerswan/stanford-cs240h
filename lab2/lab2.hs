@@ -12,10 +12,10 @@ import qualified Data.Text.Lazy.IO as TIO
 -}
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as TE
---import HilbertCoordinates  -- lab2
---import HilbertCurve        -- lab2
---import HilbertRTree        -- lab2
-import HilbertCombo        -- lab2
+--import HilbertCoordinates
+--import HilbertCurve
+--import HilbertRTree
+import HilbertCombo (hrtFromCoordList, hrtSearchWithCoord, HilbertRTree)
 import System.Console.GetOpt
 import System.CPUTime
 import System.CPUTime.Rdtsc

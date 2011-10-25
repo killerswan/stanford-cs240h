@@ -3,12 +3,17 @@
 module HilbertCombo ( hrtFromCoordList
                     , hrtSearchWithCoord
                     , HilbertRTree() -- re-export
+                    , readPoints
+                    , pointsToRect
+                    , coordsToRect
+                    , coordsToInfo
                     ) where
 
 import Data.List
+--import Data.Word
 import HilbertCoordinates  -- lab2
 import HilbertCurve        -- lab2
-import HilbertRTree        -- lab2
+import HilbertRTree (HilbertRTree(NewHRT), Tree(Info), insertHRT, searchHRT)
 
 
 
@@ -19,6 +24,7 @@ readPoints coords =
       tup (xy, r) = (Pt (xy !! 0) (xy !! 1), r)
 
       flatArray = read ("[" ++ coords ++ "]") :: [Integer]
+      --flatArray = read ("[" ++ coords ++ "]") :: [Word16] -- wrap around the actual values used
 
       f [] = Nothing
       f xs = case length xs `mod` 2 of
@@ -26,7 +32,7 @@ readPoints coords =
                _ -> error "this object path is junk"
    in
       if length flatArray == 8
-      then unfoldr f flatArray
+      then unfoldr f . map fromIntegral $ flatArray
       else error "expected 4 points, e.g.: x0,y0,x1,y1,x2,y2,x3,y3"
 
 
