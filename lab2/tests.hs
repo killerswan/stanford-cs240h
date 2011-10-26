@@ -6,7 +6,6 @@ import HilbertCoordinates
 import HilbertCurve
 import HilbertRTree
 import HilbertCombo
-import Control.Monad
 import Data.List
 import Data.Word
 import Test.QuickCheck
@@ -19,28 +18,26 @@ main :: IO ()
 main =
    do
       quickCheck hrtQueryIdentity
+      quickCheck hrtQueryIdentityMany
 
 
-w16ofLength :: Int -> Gen [Word16]
-w16ofLength n = replicateM n arbitrary
-{- restricting this to Word16 is weird, given that
--- the strings are parsed as Integer, so I can detect and
--- `error` on overflows of my hilbert curve
--}
 
 
 --
 -- HilbertCombo
 --
 
--- id
 hrtQueryIdentity :: Property
 hrtQueryIdentity =
    let
       nsToCoord ns = intercalate ", " $ map show ns
       testingThis coord = head . hrtSearchWithCoord coord . hrtFromCoordList $ coord:[]
    in
-      forAll (w16ofLength 8) $ \ns -> nsToCoord ns == testingThis (nsToCoord ns)
+      forAll (vector 8 :: Gen [Word16]) $ \ns -> nsToCoord ns == testingThis (nsToCoord ns)
+{- restricting this to Word16 is weird, given that
+-- the strings are parsed as Integer, so I can detect and
+-- `error` on overflows of my hilbert curve
+-}
 
 
 --
@@ -76,32 +73,28 @@ hilbertCurveBoundsCheck p@(Pt x y) =
 -}
 
 
-{- Also, this smells wrong:
+-- make a lot of coordinates,
+-- put them in a tree,
+-- then see if each one can be found in the combined tree
+hrtQueryIdentityMany :: Property
+hrtQueryIdentityMany =
+   let
+      someLists = listOf1 (vector 8 :: Gen [Word16])
+   in
+      -- there has got to be a better way than using forAll
+      forAll someLists $ \ls -> 
+         let
+            coords lists = map (intercalate ", " . map show) lists
+            
+            coords' :: [String]
+            coords' = coords ls
 
-      $ ./cabal-dev/bin/lab2 rects.txtrects.txt: 1454 shapes read in 90.0 milliseconds
-      >>> 1,1,65535,65535,1,1,1,1
-      found 58 matches in 0.0 microseconds (1054590 cycles):
-          1965,6375,1965,6350,2509,6350,2509,6375
-          3536,6555,3536,6530,3760,6530,3760,6555
-          4233,6937,4233,6971,3888,6971,3888,6937
-          2844,6464,2844,6440,2992,6440,2992,6464
+            hrt0 :: HilbertRTree
+            hrt0 = hrtFromCoordList coords'
 
-      >>> 0,0,65536,65536,1,1,1,1
-      found 58 matches in 0.0 microseconds (1047033 cycles):
-          1965,6375,1965,6350,2509,6350,2509,6375
-          3536,6555,3536,6530,3760,6530,3760,6555
-          4233,6937,4233,6971,3888,6971,3888,6937
-          2844,6464,2844,6440,2992,6440,2992,6464
-
-      >>> 1,1,1,65536,65536,65535,65536,1
-      found 58 matches in 0.0 microseconds (1489308 cycles):
-          1965,6375,1965,6350,2509,6350,2509,6375
-          3536,6555,3536,6530,3760,6530,3760,6555
-          4233,6937,4233,6971,3888,6971,3888,6937
-          2844,6464,2844,6440,2992,6440,2992,6464
-
-      >>> 
-
- -}
+            searchAndFilter :: String -> [String]
+            searchAndFilter cs = filter (==cs) $ hrtSearchWithCoord cs hrt0
+         in
+            sort coords' == sort (searchAndFilter =<< coords')
 
 
